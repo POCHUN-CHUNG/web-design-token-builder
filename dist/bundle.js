@@ -3121,8 +3121,10 @@ exports.createColorsPanel = createColorsPanel; function createColorsPanel(store)
           const item = renderColorItem(
             col,
             (newSeed) => {
-              const updated = currentColors.primaries.map((c, i) => (i === idx ? { ...c, seed: newSeed } : c));
-              store.dispatch(patch(`colors.${mode}.primaries`, updated));
+              const currentMode = store.getState().meta.previewMode || "light";
+              const latestColors = store.getState().colors[currentMode];
+              const updated = latestColors.primaries.map((c, i) => (i === idx ? { ...c, seed: newSeed } : c));
+              store.dispatch(patch(`colors.${currentMode}.primaries`, updated));
             },
             (id) => store.dispatch(removeColor("primaries", id)),
             primaries.length > 1
@@ -3148,8 +3150,10 @@ exports.createColorsPanel = createColorsPanel; function createColorsPanel(store)
           const item = renderColorItem(
             col,
             (newSeed) => {
-              const updated = currentColors.accents.map((c, i) => (i === idx ? { ...c, seed: newSeed } : c));
-              store.dispatch(patch(`colors.${mode}.accents`, updated));
+              const currentMode = store.getState().meta.previewMode || "light";
+              const latestColors = store.getState().colors[currentMode];
+              const updated = latestColors.accents.map((c, i) => (i === idx ? { ...c, seed: newSeed } : c));
+              store.dispatch(patch(`colors.${currentMode}.accents`, updated));
             },
             (id) => store.dispatch(removeColor("accents", id)),
             true
@@ -3167,7 +3171,10 @@ exports.createColorsPanel = createColorsPanel; function createColorsPanel(store)
         neutralContainer.innerHTML = "";
         const item = renderColorItem(
           currentColors.neutral,
-          (newSeed) => store.dispatch(patch(`colors.${mode}.neutral.seed`, newSeed)),
+          (newSeed) => {
+            const currentMode = store.getState().meta.previewMode || "light";
+            store.dispatch(patch(`colors.${currentMode}.neutral.seed`, newSeed));
+          },
           null,
           false,
           true
@@ -3185,7 +3192,10 @@ exports.createColorsPanel = createColorsPanel; function createColorsPanel(store)
         linkContainer.innerHTML = "";
         const item = renderColorItem(
           linkObj,
-          (newSeed) => store.dispatch(patch(`colors.${mode}.link.seed`, newSeed)),
+          (newSeed) => {
+            const currentMode = store.getState().meta.previewMode || "light";
+            store.dispatch(patch(`colors.${currentMode}.link.seed`, newSeed));
+          },
           null,
           false,
           true
@@ -3230,7 +3240,8 @@ exports.createColorsPanel = createColorsPanel; function createColorsPanel(store)
           const colorItem = renderColorItem(
             { seed: initialSeed },
             (newSeed) => {
-              store.dispatch(patch(`colors.${mode}.semantic.${key}`, newSeed));
+              const currentMode = store.getState().meta.previewMode || "light";
+              store.dispatch(patch(`colors.${currentMode}.semantic.${key}`, newSeed));
             },
             null,
             false
