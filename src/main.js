@@ -17,6 +17,7 @@ import { createColorsPanel } from "./panels/p2Colors.js";
 import { createTypographyPanel } from "./panels/p3Typography.js";
 import { createElevationShapePanel } from "./panels/p5ElevationShape.js";
 import { stateToDtcg } from "./export/toDtcg.js";
+import { stateToText } from "./export/toText.js";
 
 async function init() {
   /* 1. 決定初始狀態優先序 (SPEC 13.2) */
@@ -147,6 +148,7 @@ async function init() {
   const localeTabs = document.getElementById("locale-tabs");
   const resetBtn = document.getElementById("reset-btn");
   const exportJsonBtn = document.getElementById("export-json-btn");
+  const exportTxtBtn = document.getElementById("export-txt-btn");
 
   const leftPanelEl = document.getElementById("left-panel");
   const mainStageEl = document.getElementById("main-stage");
@@ -291,7 +293,8 @@ async function init() {
     if (topbarTitleEl) topbarTitleEl.textContent = t("topbar.title");
     document.title = t("topbar.title") || "Design Token Builder";
     if (resetBtn) resetBtn.textContent = t("topbar.reset");
-    if (exportJsonBtn) exportJsonBtn.textContent = t("topbar.export");
+    const exportLabel = document.getElementById("export-dropdown-label");
+    if (exportLabel) exportLabel.textContent = t("topbar.export");
     if (mobileTabSettings) mobileTabSettings.textContent = t("tab.settings");
     if (mobileTabPreview) mobileTabPreview.textContent = t("tab.preview");
     if (fullscreenToggle) fullscreenToggle.title = t("topbar.fullscreen");
@@ -381,12 +384,37 @@ async function init() {
     resetDialog.close();
   });
 
+  const exportWrapper = document.getElementById("export-wrapper");
+  const exportDropdownBtn = document.getElementById("export-dropdown-btn");
+  const exportMenu = document.getElementById("export-menu");
+
+  if (exportDropdownBtn && exportWrapper && exportMenu) {
+    exportDropdownBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      exportWrapper.classList.toggle("is-open");
+    });
+    document.addEventListener("click", (e) => {
+      if (!exportMenu.contains(e.target) && !exportDropdownBtn.contains(e.target)) {
+        exportWrapper.classList.remove("is-open");
+      }
+    });
+  }
+
   /* 匯出 JSON（產生標準 W3C DTCG 規格之 design-tokens.json） */
   exportJsonBtn.addEventListener("click", () => {
     const state = store.getState();
     const dtcg = stateToDtcg(state);
     const jsonContent = JSON.stringify(dtcg, null, 2);
     downloadFile("design-tokens.json", jsonContent, "application/json;charset=utf-8");
+    if (exportWrapper) exportWrapper.classList.remove("is-open");
+  });
+
+  /* 匯出純文字 */
+  exportTxtBtn.addEventListener("click", () => {
+    const state = store.getState();
+    const textContent = stateToText(state);
+    downloadFile("design-tokens.txt", textContent, "text/plain;charset=utf-8");
+    if (exportWrapper) exportWrapper.classList.remove("is-open");
   });
 
   function downloadFile(filename, content, mime) {

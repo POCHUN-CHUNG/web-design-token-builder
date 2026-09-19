@@ -202,19 +202,23 @@
   border-radius: var(--app-radius-md);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   padding: 4px;
-  min-width: 140px;
+  width: 100%;
   display: none;
   flex-direction: column;
   z-index: 200;
+  box-sizing: border-box;
 }
-.export-menu.show {
+.export-dropdown-wrapper.is-open .export-menu {
   display: flex;
+}
+.export-dropdown-wrapper.is-open .export-dropdown-arrow {
+  transform: rotate(180deg);
 }
 .export-menu button {
   background: transparent;
   border: none;
   color: var(--app-text);
-  text-align: left;
+  text-align: center;
   padding: 8px 12px;
   font-size: 13px;
   border-radius: 4px;

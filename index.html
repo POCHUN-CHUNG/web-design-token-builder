@@ -51,9 +51,18 @@
 
         <!-- 重設按鈕 -->
         <button class="btn-text" id="reset-btn">重設</button>
-
-        <!-- 匯出按鈕 -->
-        <button class="btn-primary" id="export-json-btn">匯出</button>
+        <div class="topbar-actions" style="display:flex; gap:8px;">
+          <div class="export-dropdown-wrapper" id="export-wrapper">
+            <button class="btn-primary" id="export-dropdown-btn">
+              <span id="export-dropdown-label">匯出</span>
+              <svg class="export-dropdown-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left: 4px; transition: transform 0.2s ease;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <div class="export-menu" id="export-menu">
+              <button id="export-json-btn">JSON</button>
+              <button id="export-txt-btn">TXT</button>
+            </div>
+          </div>
+        </div>
 
         <!-- 開發者模式專用按鈕 (僅在 ?dev=1 時由 JS 動態渲染，SPEC 2.4) -->
         <div id="dev-actions-slot"></div>
