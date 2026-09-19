@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>設計 Token 建構器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400..700&family=Noto+Sans:ital,wght@0,400..700;1,400..700&family=Noto+Sans+TC:wght@400..700&family=Noto+Serif+TC:wght@400..700&family=Roboto:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles/app-theme.css">
+  <link rel="stylesheet" href="./src/styles/layout.css">
+  <link rel="stylesheet" href="./src/styles/controls.css">
+  <link rel="stylesheet" href="./src/styles/preview.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- 頂端列 (SPEC 9.2) -->
+    <header class="app-topbar">
+      <span class="topbar-brand" id="topbar-title">設計 Token 建構器</span>
+
+      <div class="topbar-spacer"></div>
+
+      <div class="topbar-actions">
+
+        <!-- 對比度檢查結果徽章 (Item 14) -->
+        <div class="a11y-badge pass" id="a11y-badge">
+          <span class="a11y-badge-text" id="a11y-badge-text">對比度檢查通過 (AA級)</span>
+          <button class="a11y-fix-btn" id="a11y-fix-btn" style="display: none;">自動修正</button>
+        </div>
+
+        <!-- 全螢幕切換按鈕 (Segment 風格) -->
+        <div class="segmented-control" id="fullscreen-tabs">
+          <button class="segment-btn" id="fullscreen-toggle" title="全螢幕預覽">⛶</button>
+        </div>
+
+        <!-- 預覽模式切換分段控制器 -->
+        <div class="segmented-control" id="theme-tabs">
+          <button class="segment-btn active" data-theme="light" title="淺色模式">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </button>
+          <button class="segment-btn" data-theme="dark" title="深色模式">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+        </div>
+
+        <!-- 語言切換分段控制器 (SPEC 9.2) -->
+        <div class="segmented-control" id="locale-tabs">
+          <button class="segment-btn active" data-locale="zh-TW">中文</button>
+          <button class="segment-btn" data-locale="en">EN</button>
+        </div>
+
+        <!-- 重設按鈕 -->
+        <button class="btn-text" id="reset-btn">重設</button>
+
+        <!-- 匯出按鈕 -->
+        <button class="btn-primary" id="export-json-btn">匯出</button>
+
+        <!-- 開發者模式專用按鈕 (僅在 ?dev=1 時由 JS 動態渲染，SPEC 2.4) -->
+        <div id="dev-actions-slot"></div>
+      </div>
+    </header>
+
+    <!-- 行動版分頁列 (< 1024px, SPEC 9.5) -->
+    <nav class="mobile-tab-bar" id="mobile-tab-bar">
+      <div class="segmented-control">
+        <button class="segment-btn active" id="mobile-tab-settings">設定</button>
+        <button class="segment-btn" id="mobile-tab-preview">預覽</button>
+      </div>
+    </nav>
+
+    <!-- 主工作區 -->
+    <main class="app-main">
+      <!-- 左側設定欄 (SPEC 9.3) -->
+      <aside class="left-panel mobile-active" id="left-panel">
+        <!-- 5 個設定區塊掛載點 -->
+        <div id="panels-slot"></div>
+      </aside>
+
+
+      <!-- 右側主檢視區 -->
+      <section class="main-stage" id="main-stage">
+
+        <!-- 預覽區容器 (SPEC 10) -->
+        <div id="preview-root" data-mode="light">
+          <!-- 延遲 120ms 顯示的載入轉圈遮罩 (SPEC 3.2 & 10.5) -->
+          <div class="preview-loading" id="preview-loading">
+            <div class="spinner"></div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+
+  <!-- 重設確認對話框 (原生 <dialog>, SPEC 9.2) -->
+  <dialog class="confirm-dialog" id="reset-dialog">
+    <h3 style="font-size:15px; margin-bottom:8px;" id="reset-dialog-title">確認重設設計系統？</h3>
+    <p style="font-size:13px; color:var(--app-text-muted);" id="reset-dialog-msg">這將清除所有自訂內容並還原至預設狀態。</p>
+    <div class="dialog-actions">
+      <button class="btn-text" id="reset-cancel-btn">取消</button>
+      <button class="btn-primary" style="background-color:var(--app-danger);" id="reset-confirm-btn">確認重設</button>
+    </div>
+  </dialog>
+
+  <!-- 載入獨立打包檔，支援本機 file:/// 直接雙擊開啟與 http:// 伺服器 (SPEC 2.1 D3) -->
+  <script src="./dist/bundle.js"></script>
+</body>
+</html>

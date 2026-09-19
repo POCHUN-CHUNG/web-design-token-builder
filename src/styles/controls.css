@@ -1,0 +1,394 @@
+/* 設定面板控制項、折疊標題列、表單與 Container Query RWD 樣式（完全遵循 SPEC 第 9.3 節） */
+
+/* 頂置 Preset 選擇器 (SPEC 9.3.3) */
+.preset-selector-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--app-border);
+  background-color: var(--app-surface);
+}
+
+.preset-selector-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--app-text-muted);
+  margin-bottom: 10px;
+}
+
+.preset-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.preset-card-item {
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s;
+  user-select: none;
+}
+.preset-card-item:hover {
+  border-color: var(--app-text-muted);
+  background-color: var(--app-surface-hover);
+}
+.preset-card-item.active {
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 1px var(--app-accent);
+}
+
+.preset-swatches {
+  display: flex;
+  height: 16px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.preset-swatch {
+  flex: 1;
+}
+
+.preset-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--app-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 7 個可折疊設定區塊 (SPEC 9.3.1) */
+.panel-block {
+  border-bottom: 1px solid var(--app-border);
+  transition: border-color 0.2s;
+}
+.panel-block.completed {
+  border-inline-start: 3px solid var(--app-success);
+}
+
+.panel-header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid var(--app-border);
+  transition: background-color 0.15s;
+}
+.panel-header:hover {
+  background-color: #242424;
+}
+
+.panel-header-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-text);
+  flex: 1;
+}
+
+.panel-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 狀態文字 (位於按鈕外部左側, SPEC 9.3.1) */
+.panel-status-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--app-text-muted);
+  display: none;
+}
+.panel-block.completed .panel-status-text {
+  display: inline-block;
+}
+
+/* 動作按鈕 (完成 / 編輯) - Item 8: 只換字色不填滿背景，邊框微亮 */
+.panel-action-btn {
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+  color: var(--app-text-muted);
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 0;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.panel-action-btn:hover {
+  color: #ffffff;
+  border-color: #666666;
+}
+
+/* 收合圖示按鈕 - Item 8: 只換圖示色 */
+.panel-collapse-btn {
+  background: transparent;
+  border: none;
+  color: var(--app-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  transition: color 0.15s, transform 0.2s;
+}
+.panel-collapse-btn:hover {
+  color: #ffffff;
+}
+.panel-block.open .panel-collapse-btn {
+  transform: rotate(180deg);
+}
+
+/* 區塊內容容器 (SPEC 9.3.4 Container Queries) */
+.panel-content {
+  display: none;
+  padding: 16px;
+  background-color: #000000;
+  container-type: inline-size;
+  flex-direction: column;
+  gap: 16px;
+}
+.panel-block.open .panel-content {
+  display: flex;
+}
+
+/* 已完成區塊中所有控制項 disabled (SPEC 9.3.2) */
+.panel-block.completed .panel-content input,
+.panel-block.completed .panel-content select,
+.panel-block.completed .panel-content textarea,
+.panel-block.completed .panel-content button:not(.panel-action-btn) {
+  pointer-events: none;
+  opacity: 0.55;
+  filter: grayscale(0.5);
+}
+
+/* 表單控制項列與排版 */
+.ctrl-row {
+  display: grid;
+  grid-template-columns: 1fr; /* 預設標籤在上、控制項在下 (SPEC 9.3.4) */
+  gap: 6px;
+  align-items: start;
+}
+
+@container (min-width: 380px) {
+  .ctrl-row {
+    grid-template-columns: 130px 1fr; /* 寬度夠時標籤在左 (SPEC 9.3.4) */
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+.ctrl-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ffffff;
+  line-height: 1.4;
+}
+
+.ctrl-input,
+.ctrl-select,
+.ctrl-textarea {
+  min-width: 0;
+  width: 100%;
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  color: #a1a1aa;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.ctrl-input:hover,
+.ctrl-select:hover,
+.ctrl-textarea:hover {
+  border-color: #666666;
+}
+
+.ctrl-input:focus,
+.ctrl-select:focus,
+.ctrl-textarea:focus {
+  border-color: var(--app-border-focus);
+}
+
+.ctrl-input.error {
+  border-color: var(--app-danger);
+}
+
+.ctrl-textarea {
+  resize: vertical;
+  min-height: 120px; /* 目標受眾高度為一般 textarea 兩倍 (SPEC 9.3.3) */
+  line-height: 1.5;
+}
+
+/* 標籤輸入區 (Tag Input, SPEC 5.1 & 5.2) */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 6px;
+  min-height: 38px;
+  transition: border-color 0.15s;
+}
+.tags-container:hover {
+  border-color: #666666;
+}
+.tag-chip {
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--app-text);
+}
+.tag-remove-btn {
+  background: transparent;
+  border: none;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+.tag-remove-btn:hover {
+  color: var(--app-danger);
+}
+.tag-input-inline {
+  border: none;
+  background: transparent;
+  color: var(--app-text);
+  font-size: 12px;
+  outline: none;
+  flex: 1;
+  min-width: 80px;
+}
+
+/* 色彩配置色卡列與色票輸入 (SPEC 9.3.3 & 9.3.4) */
+.color-item-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 6px 10px;
+  transition: border-color 0.15s;
+}
+.color-item-row:hover {
+  border-color: #666666;
+}
+.color-picker-bubble {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--app-border);
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+.color-picker-bubble:hover {
+  border-color: #888888;
+}
+.color-picker-bubble input[type="color"] {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.color-hex-input {
+  font-family: var(--app-font-family);
+  font-size: 13px;
+  text-transform: uppercase;
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  outline: none;
+}
+.color-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--app-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  margin-left: auto;
+  transition: color 0.15s;
+}
+.color-delete-btn:hover {
+  color: #ffffff;
+}
+.color-delete-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Guidelines Do's & Don'ts 條目列表 (SPEC 9.3.3) */
+.guideline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.guideline-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.guideline-item input {
+  flex: 1;
+}
+
+/* 微調字級展開區 (SPEC 8.3) */
+.type-override-box {
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+
+/* 隱藏數字輸入框的上下微調按鈕 */
+.no-spinners::-webkit-inner-spin-button,
+.no-spinners::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.no-spinners {
+  -moz-appearance: textfield;
+}
+
+/* 隱藏 Firefox 數字輸入框的箭頭 */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield !important;
+}

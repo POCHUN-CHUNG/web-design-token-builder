@@ -1,0 +1,78 @@
+/* 應用程式自身外觀主題（:root，硬編碼，使用者永遠無法修改）
+   完全遵循 SPEC 第 3.2 節規則 3 */
+
+:root {
+  --app-bg: #000000;
+  --app-surface: #000000;
+  --app-surface-hover: #161616;
+  --app-surface-active: #222222;
+  --app-text: #ffffff;
+  --app-text-muted: #888888;
+  --app-border: #333333;
+  --app-border-focus: #ffffff;
+  --app-accent: #ffffff;
+  --app-accent-hover: #e5e5e5;
+  --app-accent-text: #000000;
+  --app-success: #888888;
+  --app-danger: #888888;
+  --app-warning: #888888;
+  --app-radius-sm: 0px;
+  --app-radius-md: 0px;
+  --app-radius-lg: 0px;
+  --app-font-family: "Noto Sans", "Noto Sans TC", sans-serif;
+  --app-header-height: 56px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--app-font-family);
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  line-height: 1.5;
+  font-size: 14px;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 系統底層（即非預覽區塊）：強制設定為 "Noto Sans", "Noto Sans TC", sans-serif，絕無其他字型 */
+.app-topbar,
+.app-topbar *,
+.left-panel,
+.left-panel *,
+.confirm-dialog,
+.confirm-dialog *,
+.mobile-tab-bar,
+.mobile-tab-bar * {
+  font-family: "Noto Sans", "Noto Sans TC", sans-serif !important;
+}
+
+/* 非預覽區塊元件全面去除圓角設計 */
+.app-topbar *,
+.left-panel *,
+.confirm-dialog,
+.confirm-dialog *,
+.segmented-control,
+.segment-btn,
+.btn-primary,
+.btn-text,
+.ctrl-input,
+.ctrl-select,
+.ctrl-textarea,
+.panel-action-btn,
+.preset-card-item,
+.preset-swatches,
+.preset-swatch,
+.tags-container,
+.tag-chip,
+.color-delete-btn,
+.mobile-tab-bar * {
+  border-radius: 0 !important;
+}
+

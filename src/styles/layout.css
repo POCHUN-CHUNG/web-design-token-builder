@@ -1,0 +1,450 @@
+/* 頁面主要版面、頂端列、拖拉分隔線與響應式切換（完全遵循 SPEC 第 9 節） */
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* 頂端列 (Topbar) */
+.app-topbar {
+  height: var(--app-header-height);
+  min-height: var(--app-header-height);
+  background-color: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  gap: 12px;
+}
+
+.topbar-brand {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--app-text);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 分段控制器 (Segmented Controller) - Preview/Markdown 與 中/EN 切換必須視覺完全一致 (SPEC 9.2) */
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--app-bg);
+  padding: 2px;
+  border-radius: var(--app-radius-md);
+  border: 1px solid var(--app-border);
+  user-select: none;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+.segment-btn {
+  background: transparent;
+  border: none;
+  color: var(--app-text-muted);
+  padding: 0 12px;
+  height: 100%;
+  font-family: var(--app-font-family);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+/* 補償全大寫英文字母 (EN) 無下延筆劃造成的視覺偏上假象，達成極致光學置中 */
+.segment-btn[data-locale="en"] {
+  padding-top: 1px;
+}
+
+.segment-btn:hover {
+  color: var(--app-text);
+}
+
+.segment-btn.active {
+  background-color: var(--app-surface);
+  color: var(--app-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* 對比度檢查結果徽章 (純文字標示與膠囊化 Action Chip) */
+.a11y-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 12px;
+  height: 32px;
+  box-sizing: border-box;
+  border-radius: 9999px;
+  background-color: var(--app-bg);
+  border: 1px solid var(--app-border);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+.a11y-badge.pass {
+  background-color: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.25);
+  color: #22c55e;
+}
+.a11y-badge.pass .a11y-badge-text {
+  color: #22c55e;
+  font-weight: 500;
+}
+.a11y-badge.fail {
+  background-color: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+}
+.a11y-badge.fail .a11y-badge-text {
+  color: #ef4444;
+  font-weight: 500;
+}
+.a11y-fix-btn {
+  background: #ef4444;
+  border: none;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 0 10px;
+  height: 22px;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(239, 68, 68, 0.35);
+  transition: background-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+.a11y-fix-btn:hover {
+  background: #dc2626;
+  transform: translateY(-0.5px);
+  box-shadow: 0 2px 5px rgba(239, 68, 68, 0.45);
+}
+.a11y-fix-btn:active {
+  transform: translateY(0);
+}
+
+/* 重設與一般文字按鈕 (Item 8: 文字按鈕 hover 僅切換文字色不填滿背景) */
+.btn-text {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--app-text-muted);
+  font-size: 13px;
+  padding: 0 12px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.btn-text:hover {
+  color: #ffffff;
+}
+
+/* 匯出主要按鈕 */
+.export-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.btn-primary {
+  background-color: var(--app-accent);
+  color: var(--app-accent-text);
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 0 16px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border-radius: var(--app-radius-md);
+  cursor: pointer;
+  gap: 6px;
+  transition: background-color 0.15s;
+}
+.btn-primary:hover {
+  background-color: var(--app-accent-hover);
+}
+
+.export-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  min-width: 140px;
+  display: none;
+  flex-direction: column;
+  z-index: 200;
+}
+.export-menu.show {
+  display: flex;
+}
+.export-menu button {
+  background: transparent;
+  border: none;
+  color: var(--app-text);
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.export-menu button:hover {
+  background-color: var(--app-surface-hover);
+}
+
+/* 主工作區 (左欄 + 分隔線 + 右側主區) */
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 左側設定欄 */
+.left-panel {
+  width: 360px;
+  min-width: 300px;
+  max-width: 560px;
+  height: 100%;
+  background-color: var(--app-surface);
+  border-right: 1px solid var(--app-border);
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.left-panel::-webkit-scrollbar {
+  display: none;
+}
+
+/* 右側主檢視區 */
+.main-stage {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--app-bg);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 右上角預覽工具列 (☀/🌙 模式, ⛶ 全螢幕) */
+.stage-toolbar {
+  position: sticky;
+  top: 12px;
+  right: 16px;
+  align-self: flex-end;
+  display: flex;
+  gap: 8px;
+  z-index: 30;
+  margin-bottom: -44px;
+  padding-right: 16px;
+}
+
+.stage-btn {
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--app-radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: all 0.15s;
+}
+.stage-btn:hover {
+  background-color: var(--app-surface-hover);
+  border-color: var(--app-text-muted);
+}
+
+/* 預覽模式容器 */
+#preview-root {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--ds-surface-bg, #ffffff);
+  color: var(--ds-surface-text, #16181d);
+  transition: background-color 0.15s, color 0.15s;
+  position: relative;
+}
+
+/* 全螢幕降級樣式 (SPEC 9.6) */
+.is-fullscreen-fallback {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  overflow-y: auto !important;
+  max-width: 100vw !important;
+}
+
+/* Markdown 檢視區 */
+.markdown-view-container {
+  display: none;
+  flex: 1;
+  padding: 32px 48px;
+  max-width: 960px;
+  margin: 0 auto;
+  width: 100%;
+}
+.markdown-view-container.active {
+  display: block;
+}
+.markdown-code-block {
+  background-color: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  padding: 24px;
+  font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--app-text);
+  overflow-x: auto;
+}
+
+/* 載入轉圈覆蓋層 (SPEC 10.5 & 3.2 延遲 120ms 顯示) */
+.preview-loading {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  background: color-mix(in srgb, var(--app-bg) 70%, transparent);
+  backdrop-filter: blur(2px);
+  z-index: 1000;
+}
+.preview-loading.show {
+  display: grid;
+}
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--app-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 原生 Popover 彈窗樣式 (SPEC 7.7) */
+[popover] {
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  padding: 16px;
+  max-width: 420px;
+  margin: auto;
+}
+[popover]::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(1px);
+}
+
+/* 原生 Dialog 樣式 (SPEC 9.2 重設確認) */
+dialog.confirm-dialog {
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  padding: 24px;
+  max-width: 380px;
+  margin: auto;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+dialog.confirm-dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* 行動版 RWD 樣式 (< 1024px, SPEC 9.5) */
+.mobile-tab-bar {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .splitter {
+    display: none !important;
+  }
+  .app-main {
+    flex-direction: column;
+  }
+  .left-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-right: none;
+    border-bottom: 1px solid var(--app-border);
+    display: none;
+  }
+  .left-panel.mobile-active {
+    display: flex;
+  }
+  .main-stage {
+    display: none;
+  }
+  .main-stage.mobile-active {
+    display: flex;
+  }
+  .mobile-tab-bar {
+    display: flex;
+    background-color: var(--app-surface);
+    border-bottom: 1px solid var(--app-border);
+    padding: 6px 16px;
+  }
+  .mobile-tab-bar .segmented-control {
+    width: 100%;
+  }
+  .mobile-tab-bar .segment-btn {
+    flex: 1;
+    text-align: center;
+  }
+}
