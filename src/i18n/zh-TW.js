@@ -67,9 +67,11 @@ export const zhTW = {
   "colors.surfaceOverride.system": "系統",
   "colors.surface.bg": "背景",
   "colors.surface.surface": "卡片",
+  "colors.surface.surfaceRaised": "子卡片",
   "colors.surface.btnSecondaryBg": "次要",
-  "colors.surface.btnInvertedBg": "反轉",
+  "colors.surface.btnInvertedBg": "背景-反轉",
   "colors.surface.text": "文字",
+  "colors.surface.textInverted": "文字-反轉",
   "colors.surface.border": "邊框",
 
   "colors.link": "連結（最多 1 個）",

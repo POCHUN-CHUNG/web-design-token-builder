@@ -22,20 +22,12 @@ export function contrastRatio(hexA, hexB) {
   return (max + 0.05) / (min + 0.05);
 }
 
-/* 挑選最佳的前景字色：優先色調端點（950, 50），保底純白/純黑（√21 定理） */
-export function pickOnColor(bgHex, ramp, threshold = 4.5) {
-  if (ramp && ramp.length === 11) {
-    const tinted = [ramp[10] /* 950 */, ramp[0] /* 50 */];
-    for (const c of tinted) {
-      if (contrastRatio(c, bgHex) >= threshold) {
-        return c;
-      }
-    }
-  }
-  /* 保底候選必須是純白或純黑（最壞情況 √21 ≈ 4.5826 > 4.5） */
-  return contrastRatio("#ffffff", bgHex) >= contrastRatio("#000000", bgHex)
-    ? "#ffffff"
-    : "#000000";
+/* 根據背景亮度，挑選合適的文字顏色 (暗底用亮字，亮底用暗字) */
+export function pickTextBasedOnBg(bgHex, darkOption, lightOption) {
+  const { L } = hexToOklch(bgHex);
+  // L 值介於 0~1 之間。這裡設定 0.65：大於 0.65 算亮底(用黑字)，小於等於 0.65 算暗底(用白字)
+  // 您可以調整此數值 (例如改為 0.60 或 0.70) 來改變系統判定暗色或亮色的基準點
+  return L > 0.65 ? darkOption : lightOption;
 }
 
 /* 兩 hex 間的 OKLCH L 差距 */

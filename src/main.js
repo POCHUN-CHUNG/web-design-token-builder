@@ -31,6 +31,26 @@ async function init() {
       initial = {
         ...defaultState,
         ...decoded,
+        colors: {
+          ...defaultState.colors,
+          ...(decoded.colors || {}),
+          light: {
+            ...defaultState.colors.light,
+            ...(decoded.colors?.light || {}),
+            surface: {
+              ...defaultState.colors.light.surface,
+              ...(decoded.colors?.light?.surface || {})
+            }
+          },
+          dark: {
+            ...defaultState.colors.dark,
+            ...(decoded.colors?.dark || {}),
+            surface: {
+              ...defaultState.colors.dark.surface,
+              ...(decoded.colors?.dark?.surface || {})
+            }
+          }
+        },
         ui: { ...defaultState.ui }
       };
       /* 清除 hash */
@@ -54,6 +74,22 @@ async function init() {
             colors: {
               ...defaultState.colors,
               ...(parsed.colors || {}),
+              light: {
+                ...defaultState.colors.light,
+                ...(parsed.colors?.light || {}),
+                surface: {
+                  ...defaultState.colors.light.surface,
+                  ...(parsed.colors?.light?.surface || {})
+                }
+              },
+              dark: {
+                ...defaultState.colors.dark,
+                ...(parsed.colors?.dark || {}),
+                surface: {
+                  ...defaultState.colors.dark.surface,
+                  ...(parsed.colors?.dark?.surface || {})
+                }
+              },
               link: parsed.colors?.link || defaultState.colors.link,
               accents: (Array.isArray(parsed.colors?.accents) && parsed.colors.accents.length >= 6)
                 ? parsed.colors.accents
@@ -212,6 +248,11 @@ async function init() {
     if (preview && preview.update) preview.update(state);
 
     /* E. 同步 UI 控制項狀態 */
+    syncUIControls(state);
+  });
+
+  /* 同步 UI 控制項狀態 */
+  function syncUIControls(state) {
     if (leftPanelEl) {
       leftPanelEl.style.width = `${state.ui.leftPanelWidth}px`;
     }
@@ -223,36 +264,40 @@ async function init() {
     }
 
     /* 預覽模式按鈕狀態 */
-    Array.from(themeTabs.children).forEach(btn => {
-      if (btn.dataset.theme === state.meta.previewMode) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
+    if (themeTabs) {
+      Array.from(themeTabs.children).forEach(btn => {
+        if (btn.dataset.theme === state.meta.previewMode) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+    }
 
     /* 語言按鈕狀態與文字 */
-    Array.from(localeTabs.children).forEach(btn => {
-      const btnLocale = (btn.dataset.locale || "").toLowerCase();
-      const stateLocale = (state.meta.locale || "").toLowerCase();
-      if (btnLocale === stateLocale) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
+    if (localeTabs) {
+      Array.from(localeTabs.children).forEach(btn => {
+        const btnLocale = (btn.dataset.locale || "").toLowerCase();
+        const stateLocale = (state.meta.locale || "").toLowerCase();
+        if (btnLocale === stateLocale) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+    }
 
     /* 頂端列文字（隨語言切換） */
-    topbarTitleEl.textContent = t("topbar.title");
+    if (topbarTitleEl) topbarTitleEl.textContent = t("topbar.title");
     document.title = t("topbar.title") || "Design Token Builder";
-    resetBtn.textContent = t("topbar.reset");
-    exportJsonBtn.textContent = t("topbar.export");
-    mobileTabSettings.textContent = t("tab.settings");
-    mobileTabPreview.textContent = t("tab.preview");
-    fullscreenToggle.title = t("topbar.fullscreen");
+    if (resetBtn) resetBtn.textContent = t("topbar.reset");
+    if (exportJsonBtn) exportJsonBtn.textContent = t("topbar.export");
+    if (mobileTabSettings) mobileTabSettings.textContent = t("tab.settings");
+    if (mobileTabPreview) mobileTabPreview.textContent = t("tab.preview");
+    if (fullscreenToggle) fullscreenToggle.title = t("topbar.fullscreen");
 
-    const lightThemeBtn = themeTabs.querySelector('[data-theme="light"]');
-    const darkThemeBtn = themeTabs.querySelector('[data-theme="dark"]');
+    const lightThemeBtn = themeTabs ? themeTabs.querySelector('[data-theme="light"]') : null;
+    const darkThemeBtn = themeTabs ? themeTabs.querySelector('[data-theme="dark"]') : null;
     if (lightThemeBtn) lightThemeBtn.title = t("colors.surfaceOverride.light");
     if (darkThemeBtn) darkThemeBtn.title = t("colors.surfaceOverride.dark");
 
@@ -266,7 +311,7 @@ async function init() {
     if (resetDialogMsg) resetDialogMsg.textContent = t("topbar.reset.confirm.msg");
     if (resetCancelBtn) resetCancelBtn.textContent = t("topbar.reset.confirm.cancel");
     if (resetConfirmBtn) resetConfirmBtn.textContent = t("topbar.reset.confirm.ok");
-  });
+  }
 
   /* 語言切換 (Item 1: 僅套用在預覽區塊，頂端列與左側調整區塊皆使用中文) */
   localeTabs.addEventListener("click", (e) => {
@@ -392,48 +437,11 @@ async function init() {
     devActionsSlot.appendChild(devBtn);
   }
 
-  /* 同步初始化 UI 狀態 */
-  function syncUIControls(state) {
-    if (themeTabs) {
-      Array.from(themeTabs.children).forEach(btn => {
-        if (btn.dataset.theme === state.meta.previewMode) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
-      });
-    }
-    if (localeTabs) {
-      Array.from(localeTabs.children).forEach(btn => {
-        const btnLocale = (btn.dataset.locale || "").toLowerCase();
-        const stateLocale = (state.meta.locale || "").toLowerCase();
-        if (btnLocale === stateLocale) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
-      });
-    }
-
-    /* 同步頂端列文字 */
-    if (topbarTitleEl) topbarTitleEl.textContent = t("topbar.title");
-    document.title = t("topbar.title") || "Design Token Builder";
-    if (resetBtn) resetBtn.textContent = t("topbar.reset");
-    if (exportJsonBtn) exportJsonBtn.textContent = t("topbar.export");
-    if (mobileTabSettings) mobileTabSettings.textContent = t("tab.settings");
-    if (mobileTabPreview) mobileTabPreview.textContent = t("tab.preview");
-    if (fullscreenToggle) fullscreenToggle.title = t("topbar.fullscreen");
-
-    const lightThemeBtn = themeTabs ? themeTabs.querySelector('[data-theme="light"]') : null;
-    const darkThemeBtn = themeTabs ? themeTabs.querySelector('[data-theme="dark"]') : null;
-    if (lightThemeBtn) lightThemeBtn.title = t("colors.surfaceOverride.light");
-    if (darkThemeBtn) darkThemeBtn.title = t("colors.surfaceOverride.dark");
-  }
-
   /* 首次觸發 Token 注入與無障礙狀態更新 */
   batchApplyTokens(store.getState());
+  panels.forEach(p => p.update(store.getState()));
   if (preview && preview.update) preview.update(store.getState());
-  leftPanelEl.style.width = `${store.getState().ui.leftPanelWidth}px`;
+  if (leftPanelEl) leftPanelEl.style.width = `${store.getState().ui.leftPanelWidth}px`;
   updateA11yBadge(store.getState());
   syncUIControls(store.getState());
 }

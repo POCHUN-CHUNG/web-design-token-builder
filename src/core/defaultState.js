@@ -37,7 +37,7 @@ export const defaultState = {
         { id: "accent-6", seed: "#806346" }
       ],
       semantic: { success: "#5a756b", warning: "#8f6d38", error: "#9e5656", info: "#5b7b88" },
-      surface: { bg: "#ffffff", surface: "#f8fafc", text: "#0f172a", border: "#cbd5e1", btnSecondaryBg: "#f1f5f9", btnInvertedBg: "#0f172a" }
+      surface: { bg: "#ffffff", surface: "#f8fafc", surfaceRaised: "#ffffff", text: "#0f172a", textInverted: "#ffffff", border: "#cbd5e1", btnSecondaryBg: "#f1f5f9", btnInvertedBg: "#0f172a" }
     },
     dark: {
       primaries: [
@@ -56,7 +56,7 @@ export const defaultState = {
         { id: "accent-6", seed: "#806346" }
       ],
       semantic: { success: "#5a756b", warning: "#8f6d38", error: "#9e5656", info: "#5b7b88" },
-      surface: { bg: "#0a0e17", surface: "#111827", text: "#f8fafc", border: "#1e293b", btnSecondaryBg: "#1e293b", btnInvertedBg: "#f8fafc" }
+      surface: { bg: "#0a0e17", surface: "#111827", surfaceRaised: "#1f2937", text: "#f8fafc", textInverted: "#000000", border: "#1e293b", btnSecondaryBg: "#1e293b", btnInvertedBg: "#f8fafc" }
     }
   },
 

@@ -401,7 +401,7 @@
 /* 次要按鈕 (Secondary) */
 .ds-btn-secondary {
   background-color: var(--ds-btn-secondary-bg, var(--ds-surface-raised, #f0f2f5));
-  color: var(--ds-surface-text, #16181d);
+  color: var(--ds-color-on-btn-secondary, #16181d);
   border-color: var(--ds-surface-border, #e2e5ea);
 }
 .ds-btn-secondary.is-hover {
@@ -422,7 +422,7 @@
 /* 反轉按鈕 (高反差極簡風格) */
 .ds-btn-inverted {
   background-color: var(--ds-btn-inverted-bg, var(--ds-surface-text, #16181d));
-  color: var(--ds-surface-bg, #ffffff);
+  color: var(--ds-color-on-inverted, #ffffff);
   border-color: var(--ds-surface-text, #16181d);
 }
 .ds-btn-inverted.is-hover {
@@ -445,7 +445,7 @@
 /* 外框按鈕 (透明底色帶外框) */
 .ds-btn-outlined {
   background-color: transparent;
-  color: var(--ds-color-primary-600, #2563eb);
+  color: var(--ds-btn-outlined-text, #2563eb);
   border-color: var(--ds-color-primary-500, #2563eb);
 }
 .ds-btn-outlined.is-hover {
@@ -469,10 +469,10 @@
   color: var(--ds-surface-text, #16181d);
 }
 .ds-btn-ghost.is-hover {
-  background-color: var(--ds-surface-raised, #f0f2f5);
+  background-color: color-mix(in srgb, var(--ds-surface-text, #16181d) 10%, transparent);
 }
 .ds-btn-ghost.is-active {
-  background-color: var(--ds-surface-border, #e2e5ea);
+  background-color: color-mix(in srgb, var(--ds-surface-text, #16181d) 20%, transparent);
 }
 .ds-btn-ghost.is-focus {
   outline: var(--ds-btn-ring-width, 2px) solid var(--ds-btn-ring-color, var(--ds-color-primary-500, #2563eb));
@@ -522,7 +522,7 @@
   padding: var(--ds-input-padding-y, 10px) var(--ds-input-padding-x, 12px);
   font-family: var(--ds-font-body);
   font-size: var(--ds-fs-body-md, 15px);
-  background-color: var(--ds-surface-bg, #ffffff);
+  background-color: var(--ds-surface-raised, #f0f2f5);
   color: var(--ds-surface-text, #16181d);
   border: 2px var(--ds-border-style, solid) var(--ds-surface-border, #e2e5ea);
   border-radius: var(--ds-input-radius, var(--ds-radius-md, 8px));
@@ -556,7 +556,7 @@
   padding: var(--ds-input-padding-y, 10px) var(--ds-input-padding-x, 12px);
   font-family: var(--ds-font-body);
   font-size: var(--ds-fs-body-md, 15px);
-  background-color: var(--ds-surface-bg, #ffffff);
+  background-color: var(--ds-surface-raised, #f0f2f5);
   color: var(--ds-surface-text, #16181d);
   border: 2px var(--ds-border-style, solid) var(--ds-surface-border, #e2e5ea);
   border-radius: var(--ds-input-radius, var(--ds-radius-md, 8px));
@@ -696,6 +696,7 @@
   width: var(--ds-check-size, 18px);
   height: var(--ds-check-size, 18px);
   border-radius: var(--ds-check-radius, 4px);
+  background-color: var(--ds-surface-raised, #f0f2f5);
   border: 1.5px solid var(--ds-surface-text-muted, #a1a1aa);
   display: grid;
   place-items: center;
@@ -711,6 +712,7 @@
   width: var(--ds-check-size, 18px);
   height: var(--ds-check-size, 18px);
   border-radius: var(--ds-check-radius, 50%);
+  background-color: var(--ds-surface-raised, #f0f2f5);
   border: 1.5px solid var(--ds-surface-text-muted, #a1a1aa);
   display: grid;
   place-items: center;
@@ -718,6 +720,7 @@
   transition: all 0.15s ease;
 }
 .ds-radio.checked {
+  background-color: var(--ds-surface-raised, #f0f2f5);
   border-color: var(--ds-color-primary-500, #2563eb);
 }
 .ds-radio-dot {

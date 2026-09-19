@@ -45,8 +45,13 @@ export function createColorsCard(store) {
     topHalf.style.boxSizing = 'border-box';
     topHalf.style.overflow = 'hidden';
 
-    const { L } = hexToOklch(seedHex);
-    topHalf.style.color = L > 0.65 ? '#000000' : '#ffffff';
+    if (cssPrefix) {
+      const onPrefix = cssPrefix.replace('ds-color-', 'ds-color-on-');
+      topHalf.style.color = `var(--${onPrefix})`;
+    } else {
+      const { L } = hexToOklch(seedHex);
+      topHalf.style.color = L > 0.65 ? '#000000' : '#ffffff';
+    }
 
     const label = document.createElement('div');
     label.className = 'ramp-name';
@@ -100,8 +105,13 @@ export function createColorsCard(store) {
     const topHalf = rampCard.querySelector('.ramp-top-half');
     if (topHalf) {
       topHalf.style.backgroundColor = cssPrefix ? `var(--${cssPrefix}-500, ${seedHex})` : seedHex;
-      const { L } = hexToOklch(seedHex);
-      topHalf.style.color = L > 0.65 ? '#000000' : '#ffffff';
+      if (cssPrefix) {
+        const onPrefix = cssPrefix.replace('ds-color-', 'ds-color-on-');
+        topHalf.style.color = `var(--${onPrefix})`;
+      } else {
+        const { L } = hexToOklch(seedHex);
+        topHalf.style.color = L > 0.65 ? '#000000' : '#ffffff';
+      }
 
       const label = topHalf.querySelector('.ramp-name');
       if (label) {

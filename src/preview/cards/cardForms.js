@@ -34,7 +34,7 @@ export function createFormsCard() {
       <div class="form-field-group">
         <label class="form-field-label" id="sample-slider-label" style="font-weight:600;"><span class="lang-zh">滑桿</span><span class="lang-sep"> / </span><span class="lang-en">Slider</span></label>
         <div style="padding: 4px 0;">
-          <div id="interactive-slider" class="ds-slider" style="width:100%; height:4px; background:var(--ds-btn-secondary-bg, #f1f5f9); border-radius:var(--ds-check-radius, 4px); position:relative; cursor:pointer;">
+          <div id="interactive-slider" class="ds-slider" style="width:100%; height:4px; background:var(--ds-surface-raised, #f0f2f5); border-radius:var(--ds-check-radius, 4px); position:relative; cursor:pointer;">
             <div id="interactive-slider-track" class="ds-slider-track" style="position:absolute; left:0; top:0; height:100%; width:50%; background:var(--ds-color-primary-500, #2563eb); border-radius:var(--ds-check-radius, 4px); pointer-events:none;"></div>
             <div id="interactive-slider-thumb" class="ds-slider-thumb" style="position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); width:16px; height:16px; background:var(--ds-color-primary-500, #2563eb); border-radius:var(--ds-check-radius, 4px); cursor:pointer;"></div>
           </div>

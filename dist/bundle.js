@@ -34,9 +34,10 @@
   }
 
   define("./src/a11y/audit.js", function(__require, exports) {
-const { contrastRatio, pickOnColor, autoFix } = __require("../color/contrast.js");
+const { contrastRatio, pickTextBasedOnBg, autoFix } = __require("../color/contrast.js");
 const { buildRamp } = __require("../color/ramp.js");
 const { deriveSurfaceColors } = __require("../tokens/derive.js");
+const { hexToOklch, hexToSrgb01 } = __require("../color/convert.js");
 
 exports.runA11yAudit = runA11yAudit; function runA11yAudit(state, targetMode = null) {
   const results = [];
@@ -71,6 +72,12 @@ exports.runA11yAudit = runA11yAudit; function runA11yAudit(state, targetMode = n
 
     const neutralRamp = buildRamp(currentColors.neutral.seed, true);
     const surfaces = deriveSurfaceColors(neutralRamp, currentColors.surface, mode);
+    
+    const textPrimary = surfaces.text;
+    const textInverted = surfaces.textInverted;
+    const lPrimary = hexToOklch(textPrimary).L;
+    const textDark = lPrimary < 0.5 ? textPrimary : textInverted;
+    const textLight = lPrimary >= 0.5 ? textPrimary : textInverted;
 
     /* 1. 一般主要文字 text / bg (AA 4.5:1, AAA 7.0:1) */
     checkPair("text / bg", surfaces.text, surfaces.bg, 4.5, 7.0, mode, "text");
@@ -87,7 +94,7 @@ exports.runA11yAudit = runA11yAudit; function runA11yAudit(state, targetMode = n
     /* 5. 按鈕主要文字 on-primary / primary.500 (AA 4.5:1, AAA 7.0:1) */
     if (currentColors.primaries && currentColors.primaries.length > 0) {
       const primaryRamp = buildRamp(currentColors.primaries[0].seed, false);
-      const onPrimary = pickOnColor(primaryRamp[5], primaryRamp, 4.5);
+      const onPrimary = pickTextBasedOnBg(primaryRamp[5], textDark, textLight);
       checkPair("on-primary / primary.500", onPrimary, primaryRamp[5], 4.5, 7.0, mode, "text");
     }
 
@@ -200,20 +207,12 @@ exports.contrastRatio = contrastRatio; function contrastRatio(hexA, hexB) {
   return (max + 0.05) / (min + 0.05);
 }
 
-/* 挑選最佳的前景字色：優先色調端點（950, 50），保底純白/純黑（√21 定理） */
-exports.pickOnColor = pickOnColor; function pickOnColor(bgHex, ramp, threshold = 4.5) {
-  if (ramp && ramp.length === 11) {
-    const tinted = [ramp[10] /* 950 */, ramp[0] /* 50 */];
-    for (const c of tinted) {
-      if (contrastRatio(c, bgHex) >= threshold) {
-        return c;
-      }
-    }
-  }
-  /* 保底候選必須是純白或純黑（最壞情況 √21 ≈ 4.5826 > 4.5） */
-  return contrastRatio("#ffffff", bgHex) >= contrastRatio("#000000", bgHex)
-    ? "#ffffff"
-    : "#000000";
+/* 根據背景亮度，挑選合適的文字顏色 (暗底用亮字，亮底用暗字) */
+exports.pickTextBasedOnBg = pickTextBasedOnBg; function pickTextBasedOnBg(bgHex, darkOption, lightOption) {
+  const { L } = hexToOklch(bgHex);
+  // L 值介於 0~1 之間。這裡設定 0.65：大於 0.65 算亮底(用黑字)，小於等於 0.65 算暗底(用白字)
+  // 您可以調整此數值 (例如改為 0.60 或 0.70) 來改變系統判定暗色或亮色的基準點
+  return L > 0.65 ? darkOption : lightOption;
 }
 
 /* 兩 hex 間的 OKLCH L 差距 */
@@ -628,7 +627,7 @@ const defaultState = exports.defaultState = {
         { id: "accent-6", seed: "#806346" }
       ],
       semantic: { success: "#5a756b", warning: "#8f6d38", error: "#9e5656", info: "#5b7b88" },
-      surface: { bg: "#ffffff", surface: "#f8fafc", text: "#0f172a", border: "#cbd5e1", btnSecondaryBg: "#f1f5f9", btnInvertedBg: "#0f172a" }
+      surface: { bg: "#ffffff", surface: "#f8fafc", surfaceRaised: "#ffffff", text: "#0f172a", textInverted: "#ffffff", border: "#cbd5e1", btnSecondaryBg: "#f1f5f9", btnInvertedBg: "#0f172a" }
     },
     dark: {
       primaries: [
@@ -647,7 +646,7 @@ const defaultState = exports.defaultState = {
         { id: "accent-6", seed: "#806346" }
       ],
       semantic: { success: "#5a756b", warning: "#8f6d38", error: "#9e5656", info: "#5b7b88" },
-      surface: { bg: "#0a0e17", surface: "#111827", text: "#f8fafc", border: "#1e293b", btnSecondaryBg: "#1e293b", btnInvertedBg: "#f8fafc" }
+      surface: { bg: "#0a0e17", surface: "#111827", surfaceRaised: "#1f2937", text: "#f8fafc", textInverted: "#000000", border: "#1e293b", btnSecondaryBg: "#1e293b", btnInvertedBg: "#f8fafc" }
     }
   },
 
@@ -1559,6 +1558,8 @@ const PRESETS = exports.PRESETS = Object.freeze([
 const { buildRamp, RAMP_STEPS } = __require("../color/ramp.js");
 const { deriveSurfaceColors, TYPE_SCALE_TABLE } = __require("../tokens/derive.js");
 const { runA11yAudit } = __require("../a11y/audit.js");
+const { pickTextBasedOnBg } = __require("../color/contrast.js");
+const { hexToOklch } = __require("../color/convert.js");
 
 /* 多語語言偵測 (SPEC 11.4) */
 exports.stateToDtcg = stateToDtcg; function stateToDtcg(state) {
@@ -1612,12 +1613,22 @@ exports.stateToDtcg = stateToDtcg; function stateToDtcg(state) {
 
     const modeObj = {};
 
+    /* 取得 surface 相關數值以計算反轉字色 */
+    const neutralRampForSurface = buildRamp(currentColors.neutral.seed, true);
+    const surfaces = deriveSurfaceColors(neutralRampForSurface, currentColors.surface, mode);
+    const textPrimary = surfaces.text;
+    const textInverted = surfaces.textInverted;
+    const lPrimary = hexToOklch(textPrimary).L;
+    const textDark = lPrimary < 0.5 ? textPrimary : textInverted;
+    const textLight = lPrimary >= 0.5 ? textPrimary : textInverted;
+
     for (const primary of currentColors.primaries) {
       const ramp = buildRamp(primary.seed, false);
       const rampObj = {};
       RAMP_STEPS.forEach((step, i) => {
         rampObj[step] = { $value: ramp[i].toLowerCase() };
       });
+      rampObj["on"] = { $value: pickTextBasedOnBg(ramp[5], textDark, textLight).toLowerCase() };
       modeObj[primary.id] = rampObj;
     }
 
@@ -1626,6 +1637,7 @@ exports.stateToDtcg = stateToDtcg; function stateToDtcg(state) {
     RAMP_STEPS.forEach((step, i) => {
       neutralRampObj[step] = { $value: neutralRamp[i].toLowerCase() };
     });
+    neutralRampObj["on"] = { $value: pickTextBasedOnBg(neutralRamp[5], textDark, textLight).toLowerCase() };
     modeObj.neutral = neutralRampObj;
 
     if (currentColors.link) {
@@ -1634,6 +1646,7 @@ exports.stateToDtcg = stateToDtcg; function stateToDtcg(state) {
       RAMP_STEPS.forEach((step, i) => {
         linkRampObj[step] = { $value: linkRamp[i].toLowerCase() };
       });
+      linkRampObj["on"] = { $value: pickTextBasedOnBg(linkRamp[5], textDark, textLight).toLowerCase() };
       modeObj.link = linkRampObj;
     }
 
@@ -1644,6 +1657,7 @@ exports.stateToDtcg = stateToDtcg; function stateToDtcg(state) {
         RAMP_STEPS.forEach((step, i) => {
           rampObj[step] = { $value: ramp[i].toLowerCase() };
         });
+        rampObj["on"] = { $value: pickTextBasedOnBg(ramp[5], textDark, textLight).toLowerCase() };
         modeObj[accent.id] = rampObj;
       }
     }
@@ -1651,18 +1665,26 @@ exports.stateToDtcg = stateToDtcg; function stateToDtcg(state) {
     if (currentColors.semantic) {
       modeObj.semantic = {};
       for (const [k, seed] of Object.entries(currentColors.semantic)) {
-        modeObj.semantic[k] = { $value: seed.toLowerCase() };
+        modeObj.semantic[k] = { 
+          $value: seed.toLowerCase(),
+          on: { $value: pickTextBasedOnBg(seed, textDark, textLight).toLowerCase() }
+        };
       }
     }
 
-    const surfaces = deriveSurfaceColors(neutralRamp, currentColors.surface, mode);
+    // (surfaces 已經在上方計算過了)
     modeObj.surface = {
       bg:      { $value: surfaces.bg.toLowerCase() },
-      surface: { $value: surfaces.surface.toLowerCase() },
-      btnSecondaryBg: { $value: surfaces.btnSecondaryBg.toLowerCase() },
       btnInvertedBg: { $value: surfaces.btnInvertedBg.toLowerCase() },
+      surface: { $value: surfaces.surface.toLowerCase() },
+      surfaceRaised: { $value: surfaces.surfaceRaised.toLowerCase() },
+      btnSecondaryBg: { $value: surfaces.btnSecondaryBg.toLowerCase() },
       text:    { $value: surfaces.text.toLowerCase() },
-      border:  { $value: surfaces.border.toLowerCase() }
+      textInverted: { $value: surfaces.textInverted.toLowerCase() },
+      textMuted: { $value: surfaces.textMuted.toLowerCase() },
+      border:  { $value: surfaces.border.toLowerCase() },
+      borderStrong: { $value: surfaces.borderStrong.toLowerCase() },
+      btnOutlinedText: { $value: surfaces.btnOutlinedText.toLowerCase() }
     };
 
     dtcg.color[mode] = modeObj;
@@ -2035,10 +2057,12 @@ const en = exports.en = {
   "colors.surfaceOverride.dark": "Dark Mode",
   "colors.surfaceOverride.system": "System",
   "colors.surface.bg": "Background",
-  "colors.surface.surface": "Surface",
+  "colors.surface.surface": "Card",
+  "colors.surface.surfaceRaised": "Sub-card",
   "colors.surface.btnSecondaryBg": "Secondary",
-  "colors.surface.btnInvertedBg": "Inverted",
+  "colors.surface.btnInvertedBg": "Inverted Bg",
   "colors.surface.text": "Text",
+  "colors.surface.textInverted": "Inverted Text",
   "colors.surface.border": "Border",
 
   "colors.link": "Link Color (Max 1)",
@@ -2268,9 +2292,11 @@ const zhTW = exports.zhTW = {
   "colors.surfaceOverride.system": "系統",
   "colors.surface.bg": "背景",
   "colors.surface.surface": "卡片",
+  "colors.surface.surfaceRaised": "子卡片",
   "colors.surface.btnSecondaryBg": "次要",
-  "colors.surface.btnInvertedBg": "反轉",
+  "colors.surface.btnInvertedBg": "背景-反轉",
   "colors.surface.text": "文字",
+  "colors.surface.textInverted": "文字-反轉",
   "colors.surface.border": "邊框",
 
   "colors.link": "連結（最多 1 個）",
@@ -2421,6 +2447,26 @@ async function init() {
       initial = {
         ...defaultState,
         ...decoded,
+        colors: {
+          ...defaultState.colors,
+          ...(decoded.colors || {}),
+          light: {
+            ...defaultState.colors.light,
+            ...(decoded.colors?.light || {}),
+            surface: {
+              ...defaultState.colors.light.surface,
+              ...(decoded.colors?.light?.surface || {})
+            }
+          },
+          dark: {
+            ...defaultState.colors.dark,
+            ...(decoded.colors?.dark || {}),
+            surface: {
+              ...defaultState.colors.dark.surface,
+              ...(decoded.colors?.dark?.surface || {})
+            }
+          }
+        },
         ui: { ...defaultState.ui }
       };
       /* 清除 hash */
@@ -2444,6 +2490,22 @@ async function init() {
             colors: {
               ...defaultState.colors,
               ...(parsed.colors || {}),
+              light: {
+                ...defaultState.colors.light,
+                ...(parsed.colors?.light || {}),
+                surface: {
+                  ...defaultState.colors.light.surface,
+                  ...(parsed.colors?.light?.surface || {})
+                }
+              },
+              dark: {
+                ...defaultState.colors.dark,
+                ...(parsed.colors?.dark || {}),
+                surface: {
+                  ...defaultState.colors.dark.surface,
+                  ...(parsed.colors?.dark?.surface || {})
+                }
+              },
               link: parsed.colors?.link || defaultState.colors.link,
               accents: (Array.isArray(parsed.colors?.accents) && parsed.colors.accents.length >= 6)
                 ? parsed.colors.accents
@@ -2602,6 +2664,11 @@ async function init() {
     if (preview && preview.update) preview.update(state);
 
     /* E. 同步 UI 控制項狀態 */
+    syncUIControls(state);
+  });
+
+  /* 同步 UI 控制項狀態 */
+  function syncUIControls(state) {
     if (leftPanelEl) {
       leftPanelEl.style.width = `${state.ui.leftPanelWidth}px`;
     }
@@ -2613,36 +2680,40 @@ async function init() {
     }
 
     /* 預覽模式按鈕狀態 */
-    Array.from(themeTabs.children).forEach(btn => {
-      if (btn.dataset.theme === state.meta.previewMode) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
+    if (themeTabs) {
+      Array.from(themeTabs.children).forEach(btn => {
+        if (btn.dataset.theme === state.meta.previewMode) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+    }
 
     /* 語言按鈕狀態與文字 */
-    Array.from(localeTabs.children).forEach(btn => {
-      const btnLocale = (btn.dataset.locale || "").toLowerCase();
-      const stateLocale = (state.meta.locale || "").toLowerCase();
-      if (btnLocale === stateLocale) {
-        btn.classList.add("active");
-      } else {
-        btn.classList.remove("active");
-      }
-    });
+    if (localeTabs) {
+      Array.from(localeTabs.children).forEach(btn => {
+        const btnLocale = (btn.dataset.locale || "").toLowerCase();
+        const stateLocale = (state.meta.locale || "").toLowerCase();
+        if (btnLocale === stateLocale) {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+    }
 
     /* 頂端列文字（隨語言切換） */
-    topbarTitleEl.textContent = t("topbar.title");
+    if (topbarTitleEl) topbarTitleEl.textContent = t("topbar.title");
     document.title = t("topbar.title") || "Design Token Builder";
-    resetBtn.textContent = t("topbar.reset");
-    exportJsonBtn.textContent = t("topbar.export");
-    mobileTabSettings.textContent = t("tab.settings");
-    mobileTabPreview.textContent = t("tab.preview");
-    fullscreenToggle.title = t("topbar.fullscreen");
+    if (resetBtn) resetBtn.textContent = t("topbar.reset");
+    if (exportJsonBtn) exportJsonBtn.textContent = t("topbar.export");
+    if (mobileTabSettings) mobileTabSettings.textContent = t("tab.settings");
+    if (mobileTabPreview) mobileTabPreview.textContent = t("tab.preview");
+    if (fullscreenToggle) fullscreenToggle.title = t("topbar.fullscreen");
 
-    const lightThemeBtn = themeTabs.querySelector('[data-theme="light"]');
-    const darkThemeBtn = themeTabs.querySelector('[data-theme="dark"]');
+    const lightThemeBtn = themeTabs ? themeTabs.querySelector('[data-theme="light"]') : null;
+    const darkThemeBtn = themeTabs ? themeTabs.querySelector('[data-theme="dark"]') : null;
     if (lightThemeBtn) lightThemeBtn.title = t("colors.surfaceOverride.light");
     if (darkThemeBtn) darkThemeBtn.title = t("colors.surfaceOverride.dark");
 
@@ -2656,7 +2727,7 @@ async function init() {
     if (resetDialogMsg) resetDialogMsg.textContent = t("topbar.reset.confirm.msg");
     if (resetCancelBtn) resetCancelBtn.textContent = t("topbar.reset.confirm.cancel");
     if (resetConfirmBtn) resetConfirmBtn.textContent = t("topbar.reset.confirm.ok");
-  });
+  }
 
   /* 語言切換 (Item 1: 僅套用在預覽區塊，頂端列與左側調整區塊皆使用中文) */
   localeTabs.addEventListener("click", (e) => {
@@ -2782,48 +2853,11 @@ async function init() {
     devActionsSlot.appendChild(devBtn);
   }
 
-  /* 同步初始化 UI 狀態 */
-  function syncUIControls(state) {
-    if (themeTabs) {
-      Array.from(themeTabs.children).forEach(btn => {
-        if (btn.dataset.theme === state.meta.previewMode) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
-      });
-    }
-    if (localeTabs) {
-      Array.from(localeTabs.children).forEach(btn => {
-        const btnLocale = (btn.dataset.locale || "").toLowerCase();
-        const stateLocale = (state.meta.locale || "").toLowerCase();
-        if (btnLocale === stateLocale) {
-          btn.classList.add("active");
-        } else {
-          btn.classList.remove("active");
-        }
-      });
-    }
-
-    /* 同步頂端列文字 */
-    if (topbarTitleEl) topbarTitleEl.textContent = t("topbar.title");
-    document.title = t("topbar.title") || "Design Token Builder";
-    if (resetBtn) resetBtn.textContent = t("topbar.reset");
-    if (exportJsonBtn) exportJsonBtn.textContent = t("topbar.export");
-    if (mobileTabSettings) mobileTabSettings.textContent = t("tab.settings");
-    if (mobileTabPreview) mobileTabPreview.textContent = t("tab.preview");
-    if (fullscreenToggle) fullscreenToggle.title = t("topbar.fullscreen");
-
-    const lightThemeBtn = themeTabs ? themeTabs.querySelector('[data-theme="light"]') : null;
-    const darkThemeBtn = themeTabs ? themeTabs.querySelector('[data-theme="dark"]') : null;
-    if (lightThemeBtn) lightThemeBtn.title = t("colors.surfaceOverride.light");
-    if (darkThemeBtn) darkThemeBtn.title = t("colors.surfaceOverride.dark");
-  }
-
   /* 首次觸發 Token 注入與無障礙狀態更新 */
   batchApplyTokens(store.getState());
+  panels.forEach(p => p.update(store.getState()));
   if (preview && preview.update) preview.update(store.getState());
-  leftPanelEl.style.width = `${store.getState().ui.leftPanelWidth}px`;
+  if (leftPanelEl) leftPanelEl.style.width = `${store.getState().ui.leftPanelWidth}px`;
   updateA11yBadge(store.getState());
   syncUIControls(store.getState());
 }
@@ -3291,12 +3325,14 @@ exports.createColorsPanel = createColorsPanel; function createColorsPanel(store)
         surfaceContainer._inputsMap = inputsMap;
 
         const props = [
-          { key: "bg",      label: "背景" },
-          { key: "surface", label: "卡片" },
+          { key: "bg",             label: "背景" },
+          { key: "btnInvertedBg",  label: "背景-反轉" },
+          { key: "surface",        label: "卡片" },
+          { key: "surfaceRaised",  label: "子卡片" },
           { key: "btnSecondaryBg", label: "次要" },
-          { key: "btnInvertedBg", label: "反轉" },
-          { key: "text",    label: "文字" },
-          { key: "border",  label: "邊框" }
+          { key: "text",           label: "文字" },
+          { key: "textInverted",   label: "文字-反轉" },
+          { key: "border",         label: "邊框" }
         ];
 
         const modeSection = document.createElement("div");
@@ -3365,7 +3401,7 @@ exports.createColorsPanel = createColorsPanel; function createColorsPanel(store)
         inputsMap[`_title`].textContent = t("colors.surfaceOverride.system") || "系統";
       }
 
-      const props = ["bg", "surface", "btnSecondaryBg", "btnInvertedBg", "text", "border"];
+      const props = ["bg", "btnInvertedBg", "surface", "surfaceRaised", "btnSecondaryBg", "text", "textInverted", "border"];
       props.forEach(prop => {
         const currentVal = currentColors.surface?.[prop];
         const el = inputsMap[prop];
@@ -4494,8 +4530,13 @@ exports.createColorsCard = createColorsCard; function createColorsCard(store) {
     topHalf.style.boxSizing = 'border-box';
     topHalf.style.overflow = 'hidden';
 
-    const { L } = hexToOklch(seedHex);
-    topHalf.style.color = L > 0.65 ? '#000000' : '#ffffff';
+    if (cssPrefix) {
+      const onPrefix = cssPrefix.replace('ds-color-', 'ds-color-on-');
+      topHalf.style.color = `var(--${onPrefix})`;
+    } else {
+      const { L } = hexToOklch(seedHex);
+      topHalf.style.color = L > 0.65 ? '#000000' : '#ffffff';
+    }
 
     const label = document.createElement('div');
     label.className = 'ramp-name';
@@ -4549,8 +4590,13 @@ exports.createColorsCard = createColorsCard; function createColorsCard(store) {
     const topHalf = rampCard.querySelector('.ramp-top-half');
     if (topHalf) {
       topHalf.style.backgroundColor = cssPrefix ? `var(--${cssPrefix}-500, ${seedHex})` : seedHex;
-      const { L } = hexToOklch(seedHex);
-      topHalf.style.color = L > 0.65 ? '#000000' : '#ffffff';
+      if (cssPrefix) {
+        const onPrefix = cssPrefix.replace('ds-color-', 'ds-color-on-');
+        topHalf.style.color = `var(--${onPrefix})`;
+      } else {
+        const { L } = hexToOklch(seedHex);
+        topHalf.style.color = L > 0.65 ? '#000000' : '#ffffff';
+      }
 
       const label = topHalf.querySelector('.ramp-name');
       if (label) {
@@ -4758,7 +4804,7 @@ exports.createFormsCard = createFormsCard; function createFormsCard() {
       <div class="form-field-group">
         <label class="form-field-label" id="sample-slider-label" style="font-weight:600;"><span class="lang-zh">滑桿</span><span class="lang-sep"> / </span><span class="lang-en">Slider</span></label>
         <div style="padding: 4px 0;">
-          <div id="interactive-slider" class="ds-slider" style="width:100%; height:4px; background:var(--ds-btn-secondary-bg, #f1f5f9); border-radius:var(--ds-check-radius, 4px); position:relative; cursor:pointer;">
+          <div id="interactive-slider" class="ds-slider" style="width:100%; height:4px; background:var(--ds-surface-raised, #f0f2f5); border-radius:var(--ds-check-radius, 4px); position:relative; cursor:pointer;">
             <div id="interactive-slider-track" class="ds-slider-track" style="position:absolute; left:0; top:0; height:100%; width:50%; background:var(--ds-color-primary-500, #2563eb); border-radius:var(--ds-check-radius, 4px); pointer-events:none;"></div>
             <div id="interactive-slider-thumb" class="ds-slider-thumb" style="position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); width:16px; height:16px; background:var(--ds-color-primary-500, #2563eb); border-radius:var(--ds-check-radius, 4px); cursor:pointer;"></div>
           </div>
@@ -5505,10 +5551,10 @@ exports.applyTokens = applyTokens; function applyTokens(previewRootEl, tokenMap)
   define("./src/tokens/derive.js", function(__require, exports) {
 /* Token 推導引擎（分片記憶化，完全遵循 SPEC 第 3.2、6.7、8.3 節與參數化旋鈕架構） */
 const { TOKEN_NAMES } = __require("./names.js");
-const { hexToOklch, oklchToHex, clamp01 } = __require("../color/convert.js");
+const { hexToOklch, oklchToHex, clamp01, hexToSrgb01 } = __require("../color/convert.js");
 const { gamutMap } = __require("../color/gamut.js");
 const { buildRamp, RAMP_STEPS } = __require("../color/ramp.js");
-const { pickOnColor, weakenToLimit, strengthenToMeet, shiftOf } = __require("../color/contrast.js");
+const { pickTextBasedOnBg, weakenToLimit, strengthenToMeet, shiftOf } = __require("../color/contrast.js");
 
 /* 9 階字級階層標準冪次與預設值（SPEC 8.3） */
 const TYPE_SCALE_TABLE = exports.TYPE_SCALE_TABLE = {
@@ -5526,12 +5572,14 @@ const TYPE_SCALE_TABLE = exports.TYPE_SCALE_TABLE = {
 
 /* 表面色推導輔助函式（SPEC 6.7） */
 exports.deriveSurfaceColors = deriveSurfaceColors; function deriveSurfaceColors(neutralRamp, surfaceTokens, mode) {
-  let bg, surface, text, border, btnSecondaryBg, btnInvertedBg;
+  let bg, surface, surfaceRaised, text, textInverted, border, btnSecondaryBg, btnInvertedBg;
 
   if (surfaceTokens && surfaceTokens.bg) {
     bg = surfaceTokens.bg;
     surface = surfaceTokens.surface;
+    surfaceRaised = surfaceTokens.surfaceRaised;
     text = surfaceTokens.text;
+    textInverted = surfaceTokens.textInverted;
     border = surfaceTokens.border;
     btnSecondaryBg = surfaceTokens.btnSecondaryBg;
     btnInvertedBg = surfaceTokens.btnInvertedBg;
@@ -5540,6 +5588,7 @@ exports.deriveSurfaceColors = deriveSurfaceColors; function deriveSurfaceColors(
       bg = neutralRamp[10]; /* neutral.950 */
       surface = neutralRamp[9]; /* neutral.900 */
       text = neutralRamp[0]; /* neutral.50 */
+      textInverted = neutralRamp[10];
       border = neutralRamp[8]; /* neutral.800 */
       btnSecondaryBg = neutralRamp[9]; /* fallback */
       btnInvertedBg = neutralRamp[0]; /* fallback */
@@ -5547,17 +5596,32 @@ exports.deriveSurfaceColors = deriveSurfaceColors; function deriveSurfaceColors(
       bg = neutralRamp[0]; /* neutral.50 */
       surface = "#ffffff";
       text = neutralRamp[10]; /* neutral.950 */
+      textInverted = neutralRamp[0];
       border = neutralRamp[2]; /* neutral.200 */
       btnSecondaryBg = neutralRamp[1]; /* fallback */
       btnInvertedBg = neutralRamp[10]; /* fallback */
     }
   }
 
-  /* surface-raised：surface 往 text 方向偏移 OKLCH L 值 0.03 */
-  const surfLch = hexToOklch(surface);
-  const textLch = hexToOklch(text);
-  const dirRaised = textLch.L > surfLch.L ? 1 : -1;
-  const surfaceRaised = oklchToHex(gamutMap(clamp01(surfLch.L + dirRaised * 0.03), surfLch.C, surfLch.H));
+  /* 確保防呆，若舊狀態缺少部分屬性則提供預設值 */
+  if (!border) border = mode === "dark" ? neutralRamp[8] : neutralRamp[2];
+  if (!surface) surface = mode === "dark" ? neutralRamp[9] : "#ffffff";
+  if (!text) text = mode === "dark" ? neutralRamp[0] : neutralRamp[10];
+  if (!bg) bg = mode === "dark" ? neutralRamp[10] : neutralRamp[0];
+
+  /* text-inverted 防呆：若無手動指定，則採用 RGB 255 - 反轉計算 */
+  if (!textInverted) {
+    const [r01, g01, b01] = hexToSrgb01(text);
+    textInverted = `#${Math.max(0, 255 - Math.round(r01 * 255)).toString(16).padStart(2, '0')}${Math.max(0, 255 - Math.round(g01 * 255)).toString(16).padStart(2, '0')}${Math.max(0, 255 - Math.round(b01 * 255)).toString(16).padStart(2, '0')}`;
+  }
+
+  /* surface-raised：若無手動指定，由 surface 往 text 方向偏移 OKLCH L 值 0.03 */
+  if (!surfaceRaised) {
+    const surfLch = hexToOklch(surface);
+    const textLch = hexToOklch(text);
+    const dirRaised = textLch.L > surfLch.L ? 1 : -1;
+    surfaceRaised = oklchToHex(gamutMap(clamp01(surfLch.L + dirRaised * 0.03), surfLch.C, surfLch.H));
+  }
 
   /* text-muted 自適應推導（同時滿足 bg 與 surface 4.5:1，取保守者） */
   const a = weakenToLimit(text, bg, 4.5);
@@ -5571,16 +5635,24 @@ exports.deriveSurfaceColors = deriveSurfaceColors; function deriveSurfaceColors(
   if (!btnSecondaryBg) btnSecondaryBg = surfaceRaised;
   if (!btnInvertedBg) btnInvertedBg = text;
 
+  /* 邊框按鈕文字色：從 text 與 textInverted 中挑選對 surface 對比度較高的 */
+  const lPrimary = hexToOklch(text).L;
+  const textDark = lPrimary < 0.5 ? text : textInverted;
+  const textLight = lPrimary >= 0.5 ? text : textInverted;
+  const btnOutlinedText = pickTextBasedOnBg(surface, textDark, textLight);
+
   return {
     bg,
     surface,
     surfaceRaised,
     text,
+    textInverted,
     textMuted,
     border,
     borderStrong,
     btnSecondaryBg,
-    btnInvertedBg
+    btnInvertedBg,
+    btnOutlinedText
   };
 }
 
@@ -5635,55 +5707,14 @@ function deriveColors(colors, previewMode) {
   const currentColors = colors[previewMode] || colors.light;
   if (!currentColors) return { tokens, ramps };
 
-  /* 1. 主色群組 (1–3) */
-  for (const primary of currentColors.primaries) {
-    const ramp = buildRamp(primary.seed, false);
-    ramps[primary.id] = ramp;
-    RAMP_STEPS.forEach((step, idx) => {
-      tokens[TOKEN_NAMES.colorGroupStep(primary.id, step)] = ramp[idx];
-    });
-    tokens[TOKEN_NAMES.colorOnGroup(primary.id)] = pickOnColor(ramp[5], ramp, 4.5);
-  }
-
-  /* 2. 中性色 (固定 1) */
+  /* 1. 中性色 (固定 1) */
   const neutralRamp = buildRamp(currentColors.neutral.seed, true);
   ramps["neutral"] = neutralRamp;
   RAMP_STEPS.forEach((step, idx) => {
     tokens[TOKEN_NAMES.colorGroupStep("neutral", step)] = neutralRamp[idx];
   });
-  tokens[TOKEN_NAMES.colorOnGroup("neutral")] = pickOnColor(neutralRamp[5], neutralRamp, 4.5);
 
-  /* 2.5 超連結色 (Link Color) */
-  const linkSeed = currentColors.link?.seed || currentColors.primaries?.[0]?.seed || "#7F5539";
-  tokens[TOKEN_NAMES.COLOR_LINK] = linkSeed;
-  const linkRamp = buildRamp(linkSeed, false);
-  ramps["link"] = linkRamp;
-  RAMP_STEPS.forEach((step, idx) => {
-    tokens[TOKEN_NAMES.colorGroupStep("link", step)] = linkRamp[idx];
-  });
-  tokens[TOKEN_NAMES.colorOnGroup("link")] = pickOnColor(linkRamp[5], linkRamp, 4.5);
-
-  /* 3. 輔助色 (0–6) */
-  if (currentColors.accents) {
-    for (const accent of currentColors.accents) {
-      const ramp = buildRamp(accent.seed, false);
-      ramps[accent.id] = ramp;
-      RAMP_STEPS.forEach((step, idx) => {
-        tokens[TOKEN_NAMES.colorGroupStep(accent.id, step)] = ramp[idx];
-      });
-      tokens[TOKEN_NAMES.colorOnGroup(accent.id)] = pickOnColor(ramp[5], ramp, 4.5);
-    }
-  }
-
-  /* 4. 狀態色 (固定 4) */
-  const semantic = currentColors.semantic || {};
-  for (const [key, seed] of Object.entries(semantic)) {
-    tokens[TOKEN_NAMES.colorSemantic(key)] = seed;
-    const semRamp = buildRamp(seed, false);
-    tokens[TOKEN_NAMES.colorOnSemantic(key)] = pickOnColor(seed, semRamp, 4.5);
-  }
-
-  /* 5. 表面色（依 Light / Dark 模式） */
+  /* 2. 表面色（依 Light / Dark 模式） */
   const surfaces = deriveSurfaceColors(neutralRamp, currentColors.surface, previewMode);
   tokens[TOKEN_NAMES.SURFACE_BG] = surfaces.bg;
   tokens[TOKEN_NAMES.SURFACE_SURFACE] = surfaces.surface;
@@ -5694,6 +5725,60 @@ function deriveColors(colors, previewMode) {
   tokens[TOKEN_NAMES.SURFACE_BORDER_STRONG] = surfaces.borderStrong;
   tokens["--ds-btn-secondary-bg"] = surfaces.btnSecondaryBg;
   tokens["--ds-btn-inverted-bg"] = surfaces.btnInvertedBg;
+  tokens["--ds-btn-outlined-text"] = surfaces.btnOutlinedText;
+
+  /* 計算文字的反轉顏色 */
+  const textPrimary = surfaces.text;
+  const textInverted = surfaces.textInverted;
+  
+  const lPrimary = hexToOklch(textPrimary).L;
+  const textDark = lPrimary < 0.5 ? textPrimary : textInverted;
+  const textLight = lPrimary >= 0.5 ? textPrimary : textInverted;
+  
+  tokens["--ds-surface-text-inverted"] = textInverted;
+  tokens["--ds-color-on-inverted"] = pickTextBasedOnBg(surfaces.btnInvertedBg, textDark, textLight);
+  tokens["--ds-color-on-btn-secondary"] = pickTextBasedOnBg(surfaces.btnSecondaryBg, textDark, textLight);
+  tokens[TOKEN_NAMES.colorOnGroup("neutral")] = pickTextBasedOnBg(neutralRamp[5], textDark, textLight);
+
+  /* 3. 主色群組 (1–3) */
+  for (const primary of currentColors.primaries) {
+    const ramp = buildRamp(primary.seed, false);
+    ramps[primary.id] = ramp;
+    RAMP_STEPS.forEach((step, idx) => {
+      tokens[TOKEN_NAMES.colorGroupStep(primary.id, step)] = ramp[idx];
+    });
+    tokens[TOKEN_NAMES.colorOnGroup(primary.id)] = pickTextBasedOnBg(ramp[5], textDark, textLight);
+  }
+
+  /* 4. 超連結色 (Link Color) */
+  const linkSeed = currentColors.link?.seed || currentColors.primaries?.[0]?.seed || "#7F5539";
+  tokens[TOKEN_NAMES.COLOR_LINK] = linkSeed;
+  const linkRamp = buildRamp(linkSeed, false);
+  ramps["link"] = linkRamp;
+  RAMP_STEPS.forEach((step, idx) => {
+    tokens[TOKEN_NAMES.colorGroupStep("link", step)] = linkRamp[idx];
+  });
+  tokens[TOKEN_NAMES.colorOnGroup("link")] = pickTextBasedOnBg(linkRamp[5], textDark, textLight);
+
+  /* 5. 輔助色 (0–6) */
+  if (currentColors.accents) {
+    for (const accent of currentColors.accents) {
+      const ramp = buildRamp(accent.seed, false);
+      ramps[accent.id] = ramp;
+      RAMP_STEPS.forEach((step, idx) => {
+        tokens[TOKEN_NAMES.colorGroupStep(accent.id, step)] = ramp[idx];
+      });
+      tokens[TOKEN_NAMES.colorOnGroup(accent.id)] = pickTextBasedOnBg(ramp[5], textDark, textLight);
+    }
+  }
+
+  /* 6. 狀態色 (固定 4) */
+  const semantic = currentColors.semantic || {};
+  for (const [key, seed] of Object.entries(semantic)) {
+    tokens[TOKEN_NAMES.colorSemantic(key)] = seed;
+    const semRamp = buildRamp(seed, false);
+    tokens[TOKEN_NAMES.colorOnSemantic(key)] = pickTextBasedOnBg(seed, textDark, textLight);
+  }
 
   lastColorsInput = colors;
   lastColorsMode = previewMode;

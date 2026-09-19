@@ -1,6 +1,7 @@
-import { contrastRatio, pickOnColor, autoFix } from "../color/contrast.js";
+import { contrastRatio, pickTextBasedOnBg, autoFix } from "../color/contrast.js";
 import { buildRamp } from "../color/ramp.js";
 import { deriveSurfaceColors } from "../tokens/derive.js";
+import { hexToOklch, hexToSrgb01 } from "../color/convert.js";
 
 export function runA11yAudit(state, targetMode = null) {
   const results = [];
@@ -35,6 +36,12 @@ export function runA11yAudit(state, targetMode = null) {
 
     const neutralRamp = buildRamp(currentColors.neutral.seed, true);
     const surfaces = deriveSurfaceColors(neutralRamp, currentColors.surface, mode);
+    
+    const textPrimary = surfaces.text;
+    const textInverted = surfaces.textInverted;
+    const lPrimary = hexToOklch(textPrimary).L;
+    const textDark = lPrimary < 0.5 ? textPrimary : textInverted;
+    const textLight = lPrimary >= 0.5 ? textPrimary : textInverted;
 
     /* 1. 一般主要文字 text / bg (AA 4.5:1, AAA 7.0:1) */
     checkPair("text / bg", surfaces.text, surfaces.bg, 4.5, 7.0, mode, "text");
@@ -51,7 +58,7 @@ export function runA11yAudit(state, targetMode = null) {
     /* 5. 按鈕主要文字 on-primary / primary.500 (AA 4.5:1, AAA 7.0:1) */
     if (currentColors.primaries && currentColors.primaries.length > 0) {
       const primaryRamp = buildRamp(currentColors.primaries[0].seed, false);
-      const onPrimary = pickOnColor(primaryRamp[5], primaryRamp, 4.5);
+      const onPrimary = pickTextBasedOnBg(primaryRamp[5], textDark, textLight);
       checkPair("on-primary / primary.500", onPrimary, primaryRamp[5], 4.5, 7.0, mode, "text");
     }
 

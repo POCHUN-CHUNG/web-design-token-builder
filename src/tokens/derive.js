@@ -1,9 +1,9 @@
 /* Token 推導引擎（分片記憶化，完全遵循 SPEC 第 3.2、6.7、8.3 節與參數化旋鈕架構） */
 import { TOKEN_NAMES } from "./names.js";
-import { hexToOklch, oklchToHex, clamp01 } from "../color/convert.js";
+import { hexToOklch, oklchToHex, clamp01, hexToSrgb01 } from "../color/convert.js";
 import { gamutMap } from "../color/gamut.js";
 import { buildRamp, RAMP_STEPS } from "../color/ramp.js";
-import { pickOnColor, weakenToLimit, strengthenToMeet, shiftOf } from "../color/contrast.js";
+import { pickTextBasedOnBg, weakenToLimit, strengthenToMeet, shiftOf } from "../color/contrast.js";
 
 /* 9 階字級階層標準冪次與預設值（SPEC 8.3） */
 export const TYPE_SCALE_TABLE = {
@@ -21,12 +21,14 @@ export const TYPE_SCALE_TABLE = {
 
 /* 表面色推導輔助函式（SPEC 6.7） */
 export function deriveSurfaceColors(neutralRamp, surfaceTokens, mode) {
-  let bg, surface, text, border, btnSecondaryBg, btnInvertedBg;
+  let bg, surface, surfaceRaised, text, textInverted, border, btnSecondaryBg, btnInvertedBg;
 
   if (surfaceTokens && surfaceTokens.bg) {
     bg = surfaceTokens.bg;
     surface = surfaceTokens.surface;
+    surfaceRaised = surfaceTokens.surfaceRaised;
     text = surfaceTokens.text;
+    textInverted = surfaceTokens.textInverted;
     border = surfaceTokens.border;
     btnSecondaryBg = surfaceTokens.btnSecondaryBg;
     btnInvertedBg = surfaceTokens.btnInvertedBg;
@@ -35,6 +37,7 @@ export function deriveSurfaceColors(neutralRamp, surfaceTokens, mode) {
       bg = neutralRamp[10]; /* neutral.950 */
       surface = neutralRamp[9]; /* neutral.900 */
       text = neutralRamp[0]; /* neutral.50 */
+      textInverted = neutralRamp[10];
       border = neutralRamp[8]; /* neutral.800 */
       btnSecondaryBg = neutralRamp[9]; /* fallback */
       btnInvertedBg = neutralRamp[0]; /* fallback */
@@ -42,17 +45,32 @@ export function deriveSurfaceColors(neutralRamp, surfaceTokens, mode) {
       bg = neutralRamp[0]; /* neutral.50 */
       surface = "#ffffff";
       text = neutralRamp[10]; /* neutral.950 */
+      textInverted = neutralRamp[0];
       border = neutralRamp[2]; /* neutral.200 */
       btnSecondaryBg = neutralRamp[1]; /* fallback */
       btnInvertedBg = neutralRamp[10]; /* fallback */
     }
   }
 
-  /* surface-raised：surface 往 text 方向偏移 OKLCH L 值 0.03 */
-  const surfLch = hexToOklch(surface);
-  const textLch = hexToOklch(text);
-  const dirRaised = textLch.L > surfLch.L ? 1 : -1;
-  const surfaceRaised = oklchToHex(gamutMap(clamp01(surfLch.L + dirRaised * 0.03), surfLch.C, surfLch.H));
+  /* 確保防呆，若舊狀態缺少部分屬性則提供預設值 */
+  if (!border) border = mode === "dark" ? neutralRamp[8] : neutralRamp[2];
+  if (!surface) surface = mode === "dark" ? neutralRamp[9] : "#ffffff";
+  if (!text) text = mode === "dark" ? neutralRamp[0] : neutralRamp[10];
+  if (!bg) bg = mode === "dark" ? neutralRamp[10] : neutralRamp[0];
+
+  /* text-inverted 防呆：若無手動指定，則採用 RGB 255 - 反轉計算 */
+  if (!textInverted) {
+    const [r01, g01, b01] = hexToSrgb01(text);
+    textInverted = `#${Math.max(0, 255 - Math.round(r01 * 255)).toString(16).padStart(2, '0')}${Math.max(0, 255 - Math.round(g01 * 255)).toString(16).padStart(2, '0')}${Math.max(0, 255 - Math.round(b01 * 255)).toString(16).padStart(2, '0')}`;
+  }
+
+  /* surface-raised：若無手動指定，由 surface 往 text 方向偏移 OKLCH L 值 0.03 */
+  if (!surfaceRaised) {
+    const surfLch = hexToOklch(surface);
+    const textLch = hexToOklch(text);
+    const dirRaised = textLch.L > surfLch.L ? 1 : -1;
+    surfaceRaised = oklchToHex(gamutMap(clamp01(surfLch.L + dirRaised * 0.03), surfLch.C, surfLch.H));
+  }
 
   /* text-muted 自適應推導（同時滿足 bg 與 surface 4.5:1，取保守者） */
   const a = weakenToLimit(text, bg, 4.5);
@@ -66,16 +84,24 @@ export function deriveSurfaceColors(neutralRamp, surfaceTokens, mode) {
   if (!btnSecondaryBg) btnSecondaryBg = surfaceRaised;
   if (!btnInvertedBg) btnInvertedBg = text;
 
+  /* 邊框按鈕文字色：從 text 與 textInverted 中挑選對 surface 對比度較高的 */
+  const lPrimary = hexToOklch(text).L;
+  const textDark = lPrimary < 0.5 ? text : textInverted;
+  const textLight = lPrimary >= 0.5 ? text : textInverted;
+  const btnOutlinedText = pickTextBasedOnBg(surface, textDark, textLight);
+
   return {
     bg,
     surface,
     surfaceRaised,
     text,
+    textInverted,
     textMuted,
     border,
     borderStrong,
     btnSecondaryBg,
-    btnInvertedBg
+    btnInvertedBg,
+    btnOutlinedText
   };
 }
 
@@ -130,55 +156,14 @@ function deriveColors(colors, previewMode) {
   const currentColors = colors[previewMode] || colors.light;
   if (!currentColors) return { tokens, ramps };
 
-  /* 1. 主色群組 (1–3) */
-  for (const primary of currentColors.primaries) {
-    const ramp = buildRamp(primary.seed, false);
-    ramps[primary.id] = ramp;
-    RAMP_STEPS.forEach((step, idx) => {
-      tokens[TOKEN_NAMES.colorGroupStep(primary.id, step)] = ramp[idx];
-    });
-    tokens[TOKEN_NAMES.colorOnGroup(primary.id)] = pickOnColor(ramp[5], ramp, 4.5);
-  }
-
-  /* 2. 中性色 (固定 1) */
+  /* 1. 中性色 (固定 1) */
   const neutralRamp = buildRamp(currentColors.neutral.seed, true);
   ramps["neutral"] = neutralRamp;
   RAMP_STEPS.forEach((step, idx) => {
     tokens[TOKEN_NAMES.colorGroupStep("neutral", step)] = neutralRamp[idx];
   });
-  tokens[TOKEN_NAMES.colorOnGroup("neutral")] = pickOnColor(neutralRamp[5], neutralRamp, 4.5);
 
-  /* 2.5 超連結色 (Link Color) */
-  const linkSeed = currentColors.link?.seed || currentColors.primaries?.[0]?.seed || "#7F5539";
-  tokens[TOKEN_NAMES.COLOR_LINK] = linkSeed;
-  const linkRamp = buildRamp(linkSeed, false);
-  ramps["link"] = linkRamp;
-  RAMP_STEPS.forEach((step, idx) => {
-    tokens[TOKEN_NAMES.colorGroupStep("link", step)] = linkRamp[idx];
-  });
-  tokens[TOKEN_NAMES.colorOnGroup("link")] = pickOnColor(linkRamp[5], linkRamp, 4.5);
-
-  /* 3. 輔助色 (0–6) */
-  if (currentColors.accents) {
-    for (const accent of currentColors.accents) {
-      const ramp = buildRamp(accent.seed, false);
-      ramps[accent.id] = ramp;
-      RAMP_STEPS.forEach((step, idx) => {
-        tokens[TOKEN_NAMES.colorGroupStep(accent.id, step)] = ramp[idx];
-      });
-      tokens[TOKEN_NAMES.colorOnGroup(accent.id)] = pickOnColor(ramp[5], ramp, 4.5);
-    }
-  }
-
-  /* 4. 狀態色 (固定 4) */
-  const semantic = currentColors.semantic || {};
-  for (const [key, seed] of Object.entries(semantic)) {
-    tokens[TOKEN_NAMES.colorSemantic(key)] = seed;
-    const semRamp = buildRamp(seed, false);
-    tokens[TOKEN_NAMES.colorOnSemantic(key)] = pickOnColor(seed, semRamp, 4.5);
-  }
-
-  /* 5. 表面色（依 Light / Dark 模式） */
+  /* 2. 表面色（依 Light / Dark 模式） */
   const surfaces = deriveSurfaceColors(neutralRamp, currentColors.surface, previewMode);
   tokens[TOKEN_NAMES.SURFACE_BG] = surfaces.bg;
   tokens[TOKEN_NAMES.SURFACE_SURFACE] = surfaces.surface;
@@ -189,6 +174,60 @@ function deriveColors(colors, previewMode) {
   tokens[TOKEN_NAMES.SURFACE_BORDER_STRONG] = surfaces.borderStrong;
   tokens["--ds-btn-secondary-bg"] = surfaces.btnSecondaryBg;
   tokens["--ds-btn-inverted-bg"] = surfaces.btnInvertedBg;
+  tokens["--ds-btn-outlined-text"] = surfaces.btnOutlinedText;
+
+  /* 計算文字的反轉顏色 */
+  const textPrimary = surfaces.text;
+  const textInverted = surfaces.textInverted;
+  
+  const lPrimary = hexToOklch(textPrimary).L;
+  const textDark = lPrimary < 0.5 ? textPrimary : textInverted;
+  const textLight = lPrimary >= 0.5 ? textPrimary : textInverted;
+  
+  tokens["--ds-surface-text-inverted"] = textInverted;
+  tokens["--ds-color-on-inverted"] = pickTextBasedOnBg(surfaces.btnInvertedBg, textDark, textLight);
+  tokens["--ds-color-on-btn-secondary"] = pickTextBasedOnBg(surfaces.btnSecondaryBg, textDark, textLight);
+  tokens[TOKEN_NAMES.colorOnGroup("neutral")] = pickTextBasedOnBg(neutralRamp[5], textDark, textLight);
+
+  /* 3. 主色群組 (1–3) */
+  for (const primary of currentColors.primaries) {
+    const ramp = buildRamp(primary.seed, false);
+    ramps[primary.id] = ramp;
+    RAMP_STEPS.forEach((step, idx) => {
+      tokens[TOKEN_NAMES.colorGroupStep(primary.id, step)] = ramp[idx];
+    });
+    tokens[TOKEN_NAMES.colorOnGroup(primary.id)] = pickTextBasedOnBg(ramp[5], textDark, textLight);
+  }
+
+  /* 4. 超連結色 (Link Color) */
+  const linkSeed = currentColors.link?.seed || currentColors.primaries?.[0]?.seed || "#7F5539";
+  tokens[TOKEN_NAMES.COLOR_LINK] = linkSeed;
+  const linkRamp = buildRamp(linkSeed, false);
+  ramps["link"] = linkRamp;
+  RAMP_STEPS.forEach((step, idx) => {
+    tokens[TOKEN_NAMES.colorGroupStep("link", step)] = linkRamp[idx];
+  });
+  tokens[TOKEN_NAMES.colorOnGroup("link")] = pickTextBasedOnBg(linkRamp[5], textDark, textLight);
+
+  /* 5. 輔助色 (0–6) */
+  if (currentColors.accents) {
+    for (const accent of currentColors.accents) {
+      const ramp = buildRamp(accent.seed, false);
+      ramps[accent.id] = ramp;
+      RAMP_STEPS.forEach((step, idx) => {
+        tokens[TOKEN_NAMES.colorGroupStep(accent.id, step)] = ramp[idx];
+      });
+      tokens[TOKEN_NAMES.colorOnGroup(accent.id)] = pickTextBasedOnBg(ramp[5], textDark, textLight);
+    }
+  }
+
+  /* 6. 狀態色 (固定 4) */
+  const semantic = currentColors.semantic || {};
+  for (const [key, seed] of Object.entries(semantic)) {
+    tokens[TOKEN_NAMES.colorSemantic(key)] = seed;
+    const semRamp = buildRamp(seed, false);
+    tokens[TOKEN_NAMES.colorOnSemantic(key)] = pickTextBasedOnBg(seed, textDark, textLight);
+  }
 
   lastColorsInput = colors;
   lastColorsMode = previewMode;

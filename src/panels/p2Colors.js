@@ -451,12 +451,14 @@ export function createColorsPanel(store) {
         surfaceContainer._inputsMap = inputsMap;
 
         const props = [
-          { key: "bg",      label: "背景" },
-          { key: "surface", label: "卡片" },
+          { key: "bg",             label: "背景" },
+          { key: "btnInvertedBg",  label: "背景-反轉" },
+          { key: "surface",        label: "卡片" },
+          { key: "surfaceRaised",  label: "子卡片" },
           { key: "btnSecondaryBg", label: "次要" },
-          { key: "btnInvertedBg", label: "反轉" },
-          { key: "text",    label: "文字" },
-          { key: "border",  label: "邊框" }
+          { key: "text",           label: "文字" },
+          { key: "textInverted",   label: "文字-反轉" },
+          { key: "border",         label: "邊框" }
         ];
 
         const modeSection = document.createElement("div");
@@ -525,7 +527,7 @@ export function createColorsPanel(store) {
         inputsMap[`_title`].textContent = t("colors.surfaceOverride.system") || "系統";
       }
 
-      const props = ["bg", "surface", "btnSecondaryBg", "btnInvertedBg", "text", "border"];
+      const props = ["bg", "btnInvertedBg", "surface", "surfaceRaised", "btnSecondaryBg", "text", "textInverted", "border"];
       props.forEach(prop => {
         const currentVal = currentColors.surface?.[prop];
         const el = inputsMap[prop];

@@ -2,6 +2,8 @@
 import { buildRamp, RAMP_STEPS } from "../color/ramp.js";
 import { deriveSurfaceColors, TYPE_SCALE_TABLE } from "../tokens/derive.js";
 import { runA11yAudit } from "../a11y/audit.js";
+import { pickTextBasedOnBg } from "../color/contrast.js";
+import { hexToOklch } from "../color/convert.js";
 
 /* 多語語言偵測 (SPEC 11.4) */
 export function stateToDtcg(state) {
@@ -55,12 +57,22 @@ export function stateToDtcg(state) {
 
     const modeObj = {};
 
+    /* 取得 surface 相關數值以計算反轉字色 */
+    const neutralRampForSurface = buildRamp(currentColors.neutral.seed, true);
+    const surfaces = deriveSurfaceColors(neutralRampForSurface, currentColors.surface, mode);
+    const textPrimary = surfaces.text;
+    const textInverted = surfaces.textInverted;
+    const lPrimary = hexToOklch(textPrimary).L;
+    const textDark = lPrimary < 0.5 ? textPrimary : textInverted;
+    const textLight = lPrimary >= 0.5 ? textPrimary : textInverted;
+
     for (const primary of currentColors.primaries) {
       const ramp = buildRamp(primary.seed, false);
       const rampObj = {};
       RAMP_STEPS.forEach((step, i) => {
         rampObj[step] = { $value: ramp[i].toLowerCase() };
       });
+      rampObj["on"] = { $value: pickTextBasedOnBg(ramp[5], textDark, textLight).toLowerCase() };
       modeObj[primary.id] = rampObj;
     }
 
@@ -69,6 +81,7 @@ export function stateToDtcg(state) {
     RAMP_STEPS.forEach((step, i) => {
       neutralRampObj[step] = { $value: neutralRamp[i].toLowerCase() };
     });
+    neutralRampObj["on"] = { $value: pickTextBasedOnBg(neutralRamp[5], textDark, textLight).toLowerCase() };
     modeObj.neutral = neutralRampObj;
 
     if (currentColors.link) {
@@ -77,6 +90,7 @@ export function stateToDtcg(state) {
       RAMP_STEPS.forEach((step, i) => {
         linkRampObj[step] = { $value: linkRamp[i].toLowerCase() };
       });
+      linkRampObj["on"] = { $value: pickTextBasedOnBg(linkRamp[5], textDark, textLight).toLowerCase() };
       modeObj.link = linkRampObj;
     }
 
@@ -87,6 +101,7 @@ export function stateToDtcg(state) {
         RAMP_STEPS.forEach((step, i) => {
           rampObj[step] = { $value: ramp[i].toLowerCase() };
         });
+        rampObj["on"] = { $value: pickTextBasedOnBg(ramp[5], textDark, textLight).toLowerCase() };
         modeObj[accent.id] = rampObj;
       }
     }
@@ -94,18 +109,26 @@ export function stateToDtcg(state) {
     if (currentColors.semantic) {
       modeObj.semantic = {};
       for (const [k, seed] of Object.entries(currentColors.semantic)) {
-        modeObj.semantic[k] = { $value: seed.toLowerCase() };
+        modeObj.semantic[k] = { 
+          $value: seed.toLowerCase(),
+          on: { $value: pickTextBasedOnBg(seed, textDark, textLight).toLowerCase() }
+        };
       }
     }
 
-    const surfaces = deriveSurfaceColors(neutralRamp, currentColors.surface, mode);
+    // (surfaces 已經在上方計算過了)
     modeObj.surface = {
       bg:      { $value: surfaces.bg.toLowerCase() },
-      surface: { $value: surfaces.surface.toLowerCase() },
-      btnSecondaryBg: { $value: surfaces.btnSecondaryBg.toLowerCase() },
       btnInvertedBg: { $value: surfaces.btnInvertedBg.toLowerCase() },
+      surface: { $value: surfaces.surface.toLowerCase() },
+      surfaceRaised: { $value: surfaces.surfaceRaised.toLowerCase() },
+      btnSecondaryBg: { $value: surfaces.btnSecondaryBg.toLowerCase() },
       text:    { $value: surfaces.text.toLowerCase() },
-      border:  { $value: surfaces.border.toLowerCase() }
+      textInverted: { $value: surfaces.textInverted.toLowerCase() },
+      textMuted: { $value: surfaces.textMuted.toLowerCase() },
+      border:  { $value: surfaces.border.toLowerCase() },
+      borderStrong: { $value: surfaces.borderStrong.toLowerCase() },
+      btnOutlinedText: { $value: surfaces.btnOutlinedText.toLowerCase() }
     };
 
     dtcg.color[mode] = modeObj;
